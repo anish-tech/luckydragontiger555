@@ -1,0 +1,823 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Dragon Tiger Predictor (Offline Copy)</title>
+  <style>
+    :root{
+      --bg:#0b1020; --card:#121a33; --muted:#a9b3d1; --text:#eef1ff;
+      --accent:#7c5cff; --good:#31d07f; --bad:#ff4d6d; --warn:#ffcc00;
+      --line:rgba(255,255,255,.10);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Arial,sans-serif;background:radial-gradient(1200px 900px at 20% 0%, #1b2150 0%, var(--bg) 55%); color:var(--text)}
+    .wrap{max-width:1150px;margin:0 auto;padding:18px}
+    h1{margin:10px 0 12px;font-size:22px}
+    .grid{display:grid;grid-template-columns:1.35fr .95fr;gap:14px}
+    @media (max-width: 980px){.grid{grid-template-columns:1fr}}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:0 12px 40px rgba(0,0,0,.35)}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .row.space{justify-content:space-between}
+    .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border-radius:999px;border:1px solid var(--line);background:rgba(0,0,0,.18);color:var(--muted);font-size:13px}
+    .kbd{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;font-size:12px;padding:2px 6px;border-radius:6px;background:rgba(255,255,255,.08);border:1px solid var(--line);color:var(--text)}
+    .inputBox{display:flex;gap:8px;align-items:center;margin-top:10px}
+    .slots{display:flex;gap:8px;flex-wrap:wrap}
+    .slot{width:44px;height:44px;border-radius:10px;border:1px dashed rgba(255,255,255,.25);display:grid;place-items:center;font-weight:800;font-size:16px;color:rgba(255,255,255,.85);background:rgba(0,0,0,.18)}
+    .slot.D{border-style:solid;border-color:rgba(49,208,127,.35);background:rgba(49,208,127,.12)}
+    .slot.T{border-style:solid;border-color:rgba(255,77,109,.35);background:rgba(255,77,109,.12)}
+    .slot.I{border-style:solid;border-color:rgba(255,204,0,.35);background:rgba(255,204,0,.10)}
+
+    button{appearance:none;border:1px solid var(--line);background:rgba(0,0,0,.15);color:var(--text);padding:10px 12px;border-radius:12px;cursor:pointer;font-weight:650}
+    button:hover{border-color:rgba(255,255,255,.22);transform:translateY(-1px)}
+    button:active{transform:translateY(0)}
+    button:disabled{opacity:.55;cursor:not-allowed;transform:none}
+    .btnD{border-color:rgba(49,208,127,.35)}
+    .btnT{border-color:rgba(255,77,109,.35)}
+    .btnI{border-color:rgba(255,204,0,.35)}
+    .btnPrimary{background:rgba(124,92,255,.22);border-color:rgba(124,92,255,.45)}
+    .btnDanger{background:rgba(255,77,109,.16);border-color:rgba(255,77,109,.35)}
+    .btnGhost{background:transparent}
+
+    .seg{display:inline-flex;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+    .seg button{border:0;border-right:1px solid var(--line);border-radius:0;background:rgba(0,0,0,.10);padding:9px 11px}
+    .seg button:last-child{border-right:0}
+    .seg button.active{background:rgba(124,92,255,.24)}
+
+    .sectionTitle{margin:12px 0 8px;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+    .statGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+    .stat{padding:12px;border:1px solid var(--line);border-radius:12px;background:rgba(0,0,0,.14)}
+    .stat .k{color:var(--muted);font-size:12px}
+    .stat .v{font-size:20px;font-weight:850;margin-top:4px}
+    .small{font-size:12px;color:var(--muted)}
+    .history{max-height:250px;overflow:auto;border:1px solid var(--line);border-radius:12px;padding:10px;background:rgba(0,0,0,.10)}
+    .hitem{display:flex;justify-content:space-between;gap:8px;padding:8px;border-bottom:1px solid rgba(255,255,255,.06)}
+    .hitem:last-child{border-bottom:0}
+    .tag{font-size:12px;padding:3px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+    .tag.good{border-color:rgba(49,208,127,.35);color:rgba(49,208,127,.95)}
+    .tag.bad{border-color:rgba(255,77,109,.35);color:rgba(255,77,109,.95)}
+
+    .riskWrap{display:grid;gap:10px}
+    .bar{height:12px;border-radius:999px;border:1px solid var(--line);background:rgba(0,0,0,.18);overflow:hidden}
+    .bar > div{height:100%;width:0%}
+    .warnBox{padding:10px;border-radius:12px;border:1px solid rgba(255,204,0,.35);background:rgba(255,204,0,.10);display:none}
+    .warnBox.show{display:block}
+
+    .modalBack{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:16px;z-index:50}
+    .modalBack.show{display:flex}
+    .modal{max-width:560px;width:100%;border-radius:16px;border:1px solid var(--line);background:linear-gradient(180deg, rgba(18,26,51,.98), rgba(10,14,28,.98));padding:14px;box-shadow:0 24px 80px rgba(0,0,0,.6)}
+    .modal h2{margin:0 0 8px;font-size:18px}
+    .modal .actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;margin-top:12px}
+
+    .muted{color:var(--muted)}
+    .rec{border:1px solid rgba(124,92,255,.35);background:rgba(124,92,255,.10);border-radius:12px;padding:12px}
+    .rec .big{font-size:22px;font-weight:900;margin-top:4px}
+    .footerNote{margin-top:10px;color:var(--muted);font-size:12px;line-height:1.45}
+
+    .formRow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .field{border:1px solid var(--line);border-radius:12px;background:rgba(0,0,0,.12);padding:10px}
+    .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+    .field input{width:100%;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.18);color:var(--text);padding:10px;border-radius:10px;font-weight:700}
+    .field input:focus{outline:2px solid rgba(124,92,255,.35);border-color:rgba(124,92,255,.35)}
+    .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Dragon Tiger Predictor</h1>
+
+    <div class="grid">
+      <div class="card">
+        <div class="row space">
+          <div class="pill">
+            <span class="muted">Prediction Mode:</span>
+            <strong id="modeLabel">Normal</strong>
+          </div>
+          <div class="pill">
+            <span class="muted">Shortcuts</span>
+            <span class="kbd">D</span><span class="kbd">T</span><span class="kbd">I</span>
+          </div>
+        </div>
+
+        <div class="sectionTitle">Enter Last 5 Results</div>
+        <div class="slots" id="slots"></div>
+
+        <div class="inputBox">
+          <button class="btnD" id="btnD">Dragon</button>
+          <button class="btnT" id="btnT">Tiger</button>
+          <button class="btnI" id="btnI">Tie</button>
+          <span style="flex:1"></span>
+          <button class="btnGhost" id="btnBack">Backspace</button>
+          <button class="btnGhost" id="btnClear">Clear</button>
+          <button class="btnDanger" id="btnReset">Reset</button>
+        </div>
+
+        <div class="sectionTitle">Select Modes</div>
+        <div class="row" style="gap:12px">
+          <div>
+            <div class="small">Automatic / Manual</div>
+            <div class="seg" id="segAuto">
+              <button data-auto="auto" class="active">Automatic</button>
+              <button data-auto="manual">Manual</button>
+            </div>
+          </div>
+          <div>
+            <div class="small">Normal / Reversed / AI</div>
+            <div class="seg" id="segMode">
+              <button data-mode="normal" class="active">Normal</button>
+              <button data-mode="reversed">Reversed</button>
+              <button data-mode="ai">AI</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="sectionTitle">Round Actions</div>
+        <div class="row">
+          <button id="btnSkip" class="btnGhost">Skip Round</button>
+          <button id="btnIgnore" class="btnGhost">Ignore &amp; Continue</button>
+        </div>
+
+        <div class="sectionTitle">AI Pattern Analysis</div>
+        <div class="rec">
+          <div class="muted" id="marketTrend">Market Trend: —</div>
+          <div class="muted" id="currentStreak">Current Streak: —</div>
+          <div class="big" id="aiRec">Enter 5 results…</div>
+          <div class="small" id="aiExplain">This offline copy uses simple pattern + transition analysis (no server calls).</div>
+        </div>
+
+        <div class="footerNote">
+          Responsible note: this is a tracker + heuristic predictor; it cannot guarantee wins. The “recovery bet” feature is a loss-chasing system
+          and can grow bets quickly—use limits and only what you can afford to lose.
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="sectionTitle">Bankroll & Betting</div>
+        <div class="formRow">
+          <div class="field">
+            <label for="bankrollInput">Bankroll</label>
+            <input id="bankrollInput" type="number" min="0" step="1" />
+          </div>
+          <div class="field">
+            <label for="baseBetInput">Starting Bet (Base)</label>
+            <input id="baseBetInput" type="number" min="1" step="1" />
+          </div>
+        </div>
+        <div class="statGrid" style="margin-top:10px">
+          <div class="stat">
+            <div class="k">Suggested Bet (Next)</div>
+            <div class="v mono" id="stSuggested">0</div>
+          </div>
+          <div class="stat">
+            <div class="k">Loss To Recover</div>
+            <div class="v mono" id="stLossCarry">0</div>
+          </div>
+        </div>
+        <div class="warnBox" id="bankWarn" style="margin-top:10px">
+          <strong>⚠ Bet exceeds bankroll</strong>
+          <div class="small">Your suggested bet is larger than your bankroll. Consider reducing base bet or stopping.</div>
+        </div>
+
+        <div class="sectionTitle">Game Statistics</div>
+        <div class="statGrid">
+          <div class="stat"><div class="k">Total Games</div><div class="v" id="stTotal">0</div></div>
+          <div class="stat"><div class="k">Overall Win Rate</div><div class="v" id="stRate">0%</div></div>
+          <div class="stat"><div class="k">Total Wins</div><div class="v" id="stWins">0</div></div>
+          <div class="stat"><div class="k">Total Losses</div><div class="v" id="stLoss">0</div></div>
+        </div>
+
+        <div class="sectionTitle">Mode Statistics</div>
+        <div class="statGrid">
+          <div class="stat"><div class="k">Normal Mode</div><div class="small" id="mNormal">Wins: 0 • Losses: 0 • Win Rate: 0%</div></div>
+          <div class="stat"><div class="k">Reversed Mode</div><div class="small" id="mRev">Wins: 0 • Losses: 0 • Win Rate: 0%</div></div>
+          <div class="stat" style="grid-column:1/-1"><div class="k">AI Mode</div><div class="small" id="mAI">Wins: 0 • Losses: 0 • Win Rate: 0%</div></div>
+        </div>
+
+        <div class="sectionTitle">Overall Games Counter</div>
+        <div class="statGrid">
+          <div class="stat"><div class="k">Games Skipped</div><div class="v" id="stSkipped">0</div></div>
+          <div class="stat"><div class="k">Ties (50%)</div><div class="v" id="stTies">0</div></div>
+          <div class="stat"><div class="k">Total Overall Games</div><div class="v" id="stOverall">0</div></div>
+        </div>
+
+        <div class="sectionTitle">High Risk Pattern Detected</div>
+        <div class="warnBox" id="warnBox">
+          <strong>⚠ High Risk Pattern Detected</strong>
+          <div class="small">Risk is high because patterns are unstable / streak pressure is high. Consider skipping.</div>
+        </div>
+
+        <div class="sectionTitle">Total Risk Factor</div>
+        <div class="riskWrap">
+          <div class="small">Total: <strong id="riskTotal">0%</strong></div>
+          <div class="bar"><div id="riskBar"></div></div>
+          <div class="small">Base Risk: <strong id="riskBase">0%</strong></div>
+          <div class="small">Pattern Risk: <strong id="riskPattern">0%</strong></div>
+          <div class="small">Streak Risk: <strong id="riskStreak">0%</strong></div>
+        </div>
+
+        <div class="sectionTitle">Result History (with Bets)</div>
+        <div class="history" id="history"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modalBack" id="predModal">
+    <div class="modal">
+      <h2>Dragon Tiger Predictor</h2>
+      <div class="pill" style="margin-bottom:10px">
+        <span>⚡</span> <strong>Fight!</strong>
+      </div>
+
+      <div class="rec">
+        <div class="muted">Prediction</div>
+        <div class="big" id="predText">—</div>
+        <div class="small muted" id="predModeText">Mode: —</div>
+      </div>
+
+      <div class="sectionTitle">Bet for this Prediction</div>
+      <div class="statGrid">
+        <div class="stat">
+          <div class="k">Bet Amount</div>
+          <div class="v mono" id="modalBet">0</div>
+        </div>
+        <div class="stat">
+          <div class="k">Total Amount</div>
+          <div class="v mono" id="modalTotal">0</div>
+        </div>
+        <div class="stat">
+          <div class="k">Amount After Bet</div>
+          <div class="v mono" id="modalAfterBet">0</div>
+        </div>
+</div>
+
+      <div class="actions">
+        <button class="btnPrimary" id="predOk">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modalBack" id="confirmModal">
+    <div class="modal">
+      <h2>Confirm Prediction</h2>
+      <div class="muted">Was the prediction correct?</div>
+      <div class="actions" style="justify-content:flex-start">
+        <button class="btnPrimary" id="btnYes">Yes (Won)</button>
+        <button class="btnDanger" id="btnNo">No (Lost)</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modalBack" id="actualModal">
+    <div class="modal">
+      <h2>Actual Result</h2>
+      <div class="muted">Which card actually won?</div>
+      <div class="row" style="margin-top:10px">
+        <button class="btnD" data-actual="D">Dragon</button>
+        <button class="btnT" data-actual="T">Tiger</button>
+        <button class="btnI" data-actual="I">Tie</button>
+      </div>
+      <div class="actions"><!-- auto-submit on selection --></div>
+      <div class="small muted" style="margin-top:10px">
+        Betting model used: even-money 1:1 (win adds bet, loss subtracts bet). Tie returns 50% of your bet (half loss) and your next bet stays the same.
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const LS_KEY = "dt_predictor_offline_v2_bankroll";
+  const el = (id) => document.getElementById(id);
+
+  const slotsEl = el("slots");
+  const historyEl = el("history");
+
+  const segAuto = el("segAuto");
+  const segMode = el("segMode");
+  const modeLabel = el("modeLabel");
+
+  const btnD = el("btnD"), btnT = el("btnT"), btnI = el("btnI");
+  const btnBack = el("btnBack"), btnClear = el("btnClear"), btnReset = el("btnReset");
+  const btnSkip = el("btnSkip"), btnIgnore = el("btnIgnore");
+
+  const bankrollInput = el("bankrollInput");
+  const baseBetInput = el("baseBetInput");
+  const bankWarn = el("bankWarn");
+  const stSuggested = el("stSuggested");
+  const stLossCarry = el("stLossCarry");
+
+  const predModal = el("predModal"), confirmModal = el("confirmModal"), actualModal = el("actualModal");
+  const predText = el("predText"), predModeText = el("predModeText");
+  const modalBet = el("modalBet"), modalTotal = el("modalTotal"), modalAfterBet = el("modalAfterBet");
+  const predOk = el("predOk"), btnYes = el("btnYes"), btnNo = el("btnNo");
+
+  const marketTrend = el("marketTrend"), currentStreak = el("currentStreak"), aiRec = el("aiRec"), aiExplain = el("aiExplain");
+
+  const stTotal = el("stTotal"), stWins = el("stWins"), stLoss = el("stLoss"), stRate = el("stRate");
+  const mNormal = el("mNormal"), mRev = el("mRev"), mAI = el("mAI");
+  const stSkipped = el("stSkipped"), stTies = el("stTies"), stOverall = el("stOverall");
+
+  const warnBox = el("warnBox");
+  const riskTotal = el("riskTotal"), riskBase = el("riskBase"), riskPattern = el("riskPattern"), riskStreak = el("riskStreak");
+  const riskBar = el("riskBar");
+
+  const state = {
+    inputs: [],
+    fullHistory: [],
+    autoMode: true,
+    manualMode: "normal",
+    activeMode: "normal",
+    smartHoldAI: false,
+    lastPrediction: null,
+
+    bankroll: 100000,
+    baseBet: 1000,
+    lossCarry: 0,
+    suggestedBet: 1000,
+
+    stats: {
+      total: 0, wins: 0, losses: 0, ties: 0, skipped: 0, overall: 0,
+      byMode: { normal:{wins:0,losses:0}, reversed:{wins:0,losses:0}, ai:{wins:0,losses:0} }
+    },
+    predLog: []
+  };
+
+  function clampInt(n, fallback){
+    const x = Number(n);
+    if(!Number.isFinite(x)) return fallback;
+    return Math.max(0, Math.floor(x));
+  }
+
+  function load(){
+    try{
+      const raw = localStorage.getItem(LS_KEY);
+      if(!raw) return;
+      const saved = JSON.parse(raw);
+      Object.assign(state, saved);
+    }catch(e){}
+  }
+  function save(){ localStorage.setItem(LS_KEY, JSON.stringify(state)); }
+
+  function winRate(w,l){ const t=w+l; return t?Math.round((w/t)*100):0; }
+  function labelMode(m){ return m==="normal"?"Normal":(m==="reversed"?"Reversed":"AI"); }
+
+  function setSegActive(root, isOn){
+    [...root.querySelectorAll("button")].forEach(b => b.classList.toggle("active", isOn(b)));
+  }
+
+  function lastNonTie(arr){
+    for(let i=arr.length-1;i>=0;i--) if(arr[i] !== "I") return arr[i];
+    return null;
+  }
+
+  function streakInfo(arr){
+    const base = lastNonTie(arr);
+    if(!base) return {side:null,len:0};
+    let len=0;
+    for(let i=arr.length-1;i>=0;i--){
+      if(arr[i]==="I") continue;
+      if(arr[i]===base) len++; else break;
+    }
+    return {side:base,len};
+  }
+
+  function computeMarketTrend(){
+    const recent = state.fullHistory.slice(-30).filter(x=>x!=="I");
+    if(recent.length < 6) return "—";
+    const d = recent.filter(x=>x==="D").length;
+    const t = recent.length - d;
+    if(Math.abs(d-t) <= 2) return "Balanced";
+    return d>t ? "Dragon-biased" : "Tiger-biased";
+  }
+
+  function patternRiskScore(){
+    const r = state.fullHistory.slice(-12).filter(x=>x!=="I");
+    if(r.length < 6) return 0;
+    const d = r.filter(x=>x==="D").length;
+    const p = d / r.length;
+    const ent = 1 - Math.abs(0.5 - p) / 0.5;
+    return Math.round(ent * 55);
+  }
+
+  function streakRiskScore(){
+    const s = streakInfo(state.fullHistory);
+    if(!s.side) return 0;
+    if(s.len <= 2) return 0;
+    if(s.len <= 4) return 18;
+    if(s.len <= 6) return 32;
+    return 45;
+  }
+
+  function computeRisk(){
+    const base = 25;
+    const pr = patternRiskScore();
+    const sr = streakRiskScore();
+    const total = Math.min(100, base + pr + sr);
+    return {base, pr, sr, total};
+  }
+
+  function recomputeSuggestedBet(){
+    state.suggestedBet = Math.max(1, Math.floor(state.lossCarry + state.baseBet));
+  }
+
+  function renderBankrollUI(){
+    bankrollInput.value = String(state.bankroll);
+    baseBetInput.value = String(state.baseBet);
+    stSuggested.textContent = String(state.suggestedBet);
+    stLossCarry.textContent = String(state.lossCarry);
+    const exceeds = state.suggestedBet > state.bankroll && state.bankroll > 0;
+    bankWarn.classList.toggle("show", exceeds);
+  }
+
+  function normalPredict(last5){
+    const seq = last5.filter(x=>x!=="I");
+    if(seq.length===0) return Math.random()<0.5?"D":"T";
+
+    let alt=0;
+    for(let i=1;i<seq.length;i++) if(seq[i]!==seq[i-1]) alt++;
+    const chop = alt >= Math.max(2, seq.length-2);
+
+    let s=1;
+    for(let i=seq.length-2;i>=0;i--){ if(seq[i]===seq[seq.length-1]) s++; else break; }
+
+    if(chop) return seq[seq.length-1]==="D"?"T":"D";
+    if(s>=3){
+      return Math.random()<0.60 ? (seq[seq.length-1]==="D"?"T":"D") : seq[seq.length-1];
+    }
+    const d = seq.filter(x=>x==="D").length;
+    const t = seq.length - d;
+    if(d===t) return seq[seq.length-1];
+    return d>t?"D":"T";
+  }
+
+  function aiPredict(){
+    const hist = state.fullHistory.filter(x=>x!=="I");
+    if(hist.length < 8) return normalPredict(state.inputs);
+    const last = hist[hist.length-1];
+    let dToD=1,dToT=1,tToD=1,tToT=1;
+    for(let i=1;i<hist.length;i++){
+      const a=hist[i-1], b=hist[i];
+      if(a==="D" && b==="D") dToD++;
+      if(a==="D" && b==="T") dToT++;
+      if(a==="T" && b==="D") tToD++;
+      if(a==="T" && b==="T") tToT++;
+    }
+    const pD = (last==="D") ? dToD/(dToD+dToT) : tToD/(tToD+tToT);
+    return pD>=0.5 ? "D" : "T";
+  }
+
+  function chooseModeForThisRound(){
+    if(!state.autoMode) return state.manualMode;
+    const log = state.predLog.slice(-2);
+    if(log.length===2 && log[0].ok===log[1].ok) state.smartHoldAI = true;
+    if(state.smartHoldAI) return "ai";
+    return "normal";
+  }
+
+  function renderSlots(){
+    slotsEl.innerHTML = "";
+    for(let i=0;i<5;i++){
+      const v = state.inputs[i] || "";
+      const d = document.createElement("div");
+      d.className = "slot " + (v||"");
+      d.textContent = v || "";
+      slotsEl.appendChild(d);
+    }
+  }
+
+  function renderRisk(r){
+    riskTotal.textContent = r.total + "%";
+    riskBase.textContent = r.base + "%";
+    riskPattern.textContent = r.pr + "%";
+    riskStreak.textContent = r.sr + "%";
+    riskBar.style.width = r.total + "%";
+    riskBar.style.background = (r.total>=70) ? "rgba(255,204,0,.85)" : "rgba(49,208,127,.75)";
+    warnBox.classList.toggle("show", r.total>=70);
+  }
+
+  function renderStats(){
+    const s = state.stats;
+    stTotal.textContent = s.total;
+    stWins.textContent = s.wins;
+    stLoss.textContent = s.losses;
+    stRate.textContent = winRate(s.wins,s.losses) + "%";
+    const n=s.byMode.normal, r=s.byMode.reversed, a=s.byMode.ai;
+    mNormal.textContent = `Wins: ${n.wins} • Losses: ${n.losses} • Win Rate: ${winRate(n.wins,n.losses)}%`;
+    mRev.textContent = `Wins: ${r.wins} • Losses: ${r.losses} • Win Rate: ${winRate(r.wins,r.losses)}%`;
+    mAI.textContent = `Wins: ${a.wins} • Losses: ${a.losses} • Win Rate: ${winRate(a.wins,a.losses)}%`;
+    stSkipped.textContent = s.skipped;
+    stTies.textContent = s.ties;
+    s.overall = s.total + s.skipped;
+    stOverall.textContent = s.overall;
+  }
+
+  function renderHistory(){
+    historyEl.innerHTML = "";
+    const items = state.predLog.slice().reverse().slice(0, 60);
+    if(!items.length){
+      historyEl.innerHTML = '<div class="small muted">No predictions yet.</div>';
+      return;
+    }
+    for(const it of items){
+      const row = document.createElement("div");
+      row.className = "hitem";
+      const left = document.createElement("div");
+      const dt = new Date(it.ts);
+      const predName = it.pred==="D"?"Dragon":"Tiger";
+      const actualName = it.actual ? (it.actual==="D"?"Dragon":it.actual==="T"?"Tiger":"Tie") : "—";
+      left.innerHTML = `
+        <div><strong>${predName}</strong> <span class="muted">(${labelMode(it.mode)})</span></div>
+        <div class="small muted">Actual: ${actualName} • Bet: <span class="mono">${it.bet}</span> • Bank: <span class="mono">${it.bankrollBefore}</span> → <span class="mono">${it.bankrollAfter}</span> • ${dt.toLocaleString()}</div>
+      `;
+      const right = document.createElement("div");
+      const tag = document.createElement("span");
+      if(it.ok === null){
+        tag.className = "tag";
+        tag.style.borderColor = "rgba(255,204,0,.35)";
+        tag.style.color = "rgba(255,204,0,.95)";
+        tag.textContent = "Tie (50%)";
+      } else {
+        tag.className = "tag " + (it.ok ? "good" : "bad");
+        tag.textContent = it.ok ? "✓ Win" : "✕ Loss";
+      }
+      right.appendChild(tag);
+      row.appendChild(left);
+      row.appendChild(right);
+      historyEl.appendChild(row);
+    }
+  }
+
+  function renderModeUI(){
+    setSegActive(segAuto, b => (b.dataset.auto === (state.autoMode ? "auto":"manual")));
+    setSegActive(segMode, b => (b.dataset.mode === state.manualMode));
+    modeLabel.textContent = labelMode(state.autoMode ? (state.smartHoldAI ? "ai":"normal") : state.manualMode);
+  }
+
+  function openModal(m){ m.classList.add("show"); }
+  function closeModal(m){ m.classList.remove("show"); }
+
+  function updateLeftRecText(mode, pred){
+    aiRec.textContent = pred==="D" ? "Recommend: Dragon" : "Recommend: Tiger";
+    aiExplain.textContent = (mode==="ai") ? "AI Mode: transition probabilities from your full history."
+      : (mode==="reversed") ? "Reversed Mode: opposite of Normal heuristic."
+      : "Normal Mode: chop/streak + majority heuristic.";
+    marketTrend.textContent = "Market Trend: " + computeMarketTrend();
+    const s = streakInfo(state.fullHistory);
+    currentStreak.textContent = "Current Streak: " + (s.side ? ((s.side==="D"?"Dragon":"Tiger") + " × " + s.len) : "—");
+  }
+
+  function makePrediction(){
+    const mode = chooseModeForThisRound();
+    state.activeMode = mode;
+    modeLabel.textContent = labelMode(mode);
+
+    const risk = computeRisk();
+    let pred = (mode==="ai") ? aiPredict() : normalPredict(state.inputs);
+    if(mode==="reversed") pred = pred==="D"?"T":"D";
+
+    recomputeSuggestedBet();
+
+    state.lastPrediction = {
+      pred, mode, last5:[...state.inputs],
+      risk, ts:Date.now(),
+      bet: state.suggestedBet,
+      bankrollBefore: state.bankroll
+    };
+
+    updateLeftRecText(mode, pred);
+    renderRisk(risk);
+    renderBankrollUI();
+
+    predText.textContent = pred==="D" ? "Dragon" : "Tiger";
+    predModeText.textContent = "Mode: " + labelMode(mode);
+    modalBet.textContent = String(state.suggestedBet);
+    modalTotal.textContent = String(state.bankroll);
+    modalAfterBet.textContent = String(Math.max(0, state.bankroll - state.suggestedBet));
+
+    openModal(predModal);
+    save();
+  }
+
+  function addInput(v){
+    if(state.inputs.length>=5) return;
+    state.inputs.push(v);
+    state.fullHistory.push(v);
+    renderSlots();
+    save();
+    if(state.inputs.length===5) makePrediction();
+    else aiRec.textContent = "Enter " + (5-state.inputs.length) + " more result(s)…";
+  }
+
+  function backspace(){
+    if(!state.inputs.length) return;
+    state.inputs.pop();
+    renderSlots();
+    aiRec.textContent = "Enter " + (5-state.inputs.length) + " more result(s)…";
+    save();
+  }
+
+  function clearInputs(){
+    state.inputs = [];
+    renderSlots();
+    aiRec.textContent = "Enter 5 results…";
+    save();
+  }
+
+  // Keep last 4 results and add the latest actual result to instantly generate the next prediction.
+  // This avoids re-entering all 5 every round.
+  function primeNextRound(actualFinal){
+    if(!actualFinal) return;
+
+    // Add the actual outcome (the round we just settled) to the global history
+    state.fullHistory.push(actualFinal);
+
+    // Build next input window from the previous 5 (shift by 1) + actualFinal
+    const prev5 = (state.lastPrediction && Array.isArray(state.lastPrediction.last5)) ? state.lastPrediction.last5 : state.inputs;
+    const next5 = prev5.slice(1).concat([actualFinal]);
+    state.inputs = next5.slice(-5);
+
+    renderSlots();
+    save();
+
+    // Immediately generate next prediction (fast workflow)
+    makePrediction();
+  }
+
+
+  function applyOutcome(ok, actual){
+    const lp = state.lastPrediction;
+    if(!lp) return;
+
+    const bet = clampInt(lp.bet, state.baseBet);
+    const bankrollBefore = clampInt(state.bankroll, 0);
+
+    // Actual outcome for the round we are settling (used for the rolling-5 window)
+    const actualFinal = ok ? lp.pred : actual;
+
+    if(ok){
+      state.bankroll = bankrollBefore + bet;
+      state.lossCarry = 0;
+      if(state.smartHoldAI) state.smartHoldAI = false;
+      recomputeSuggestedBet();
+    } else if(actual === "I"){
+      // TIE: return 50% of bet (net loss = 50%), and KEEP next bet the same (no increase / no reset)
+      const halfLoss = Math.round(bet * 0.5);
+      state.bankroll = Math.max(0, bankrollBefore - halfLoss);
+      // Do not change lossCarry on tie (bet consistency requested)
+      // Keep suggestedBet as the same bet amount used this round
+      state.suggestedBet = bet;
+    } else {
+      state.bankroll = Math.max(0, bankrollBefore - bet);
+      state.lossCarry = clampInt(state.lossCarry, 0) + bet;
+      recomputeSuggestedBet();
+    }
+
+    state.stats.total += 1;
+    if(ok) {
+      state.stats.wins += 1;
+    } else if(actual === "I") {
+      state.stats.ties += 1;
+    } else {
+      state.stats.losses += 1;
+    }
+    if(ok) {
+      state.stats.byMode[lp.mode].wins += 1;
+    } else if(actual !== "I") {
+      state.stats.byMode[lp.mode].losses += 1;
+    }
+
+    state.predLog.push({
+      pred: lp.pred,
+      actual: actual || (ok ? lp.pred : null),
+      ok: (actual === "I" ? null : ok),
+      mode: lp.mode,
+      bet,
+      bankrollBefore,
+      bankrollAfter: state.bankroll,
+      lossCarryAfter: state.lossCarry,
+      ts: Date.now()
+    });
+
+    renderStats();
+    renderHistory();
+    renderBankrollUI();
+
+    // Fast mode: carry forward last 4 + latest actual
+    primeNextRound(actualFinal);
+  }
+
+  function skipRound(){
+    state.stats.skipped += 1;
+    state.stats.overall += 1;
+    clearInputs();
+    renderStats();
+    save();
+  }
+
+  function resetAll(){
+    if(!confirm("Reset everything? This clears history, stats, and bankroll tracking.")) return;
+    state.inputs = [];
+    state.fullHistory = [];
+    state.smartHoldAI = false;
+    state.lastPrediction = null;
+    state.bankroll = 100000;
+    state.baseBet = 1000;
+    state.lossCarry = 0;
+    state.suggestedBet = 1000;
+    state.stats = { total:0,wins:0,losses:0,ties:0,skipped:0,overall:0,
+      byMode:{normal:{wins:0,losses:0},reversed:{wins:0,losses:0},ai:{wins:0,losses:0}} };
+    state.predLog = [];
+    renderAll();
+    save();
+  }
+
+  btnD.addEventListener("click", () => addInput("D"));
+  btnT.addEventListener("click", () => addInput("T"));
+  btnI.addEventListener("click", () => addInput("I"));
+  btnBack.addEventListener("click", backspace);
+  btnClear.addEventListener("click", clearInputs);
+  btnReset.addEventListener("click", resetAll);
+  btnSkip.addEventListener("click", skipRound);
+  btnIgnore.addEventListener("click", skipRound);
+
+  bankrollInput.addEventListener("change", () => {
+    state.bankroll = clampInt(bankrollInput.value, state.bankroll);
+    renderBankrollUI();
+    save();
+  });
+
+  baseBetInput.addEventListener("change", () => {
+    state.baseBet = Math.max(1, clampInt(baseBetInput.value, state.baseBet));
+    recomputeSuggestedBet();
+    renderBankrollUI();
+    save();
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if(predModal.classList.contains("show") || confirmModal.classList.contains("show") || actualModal.classList.contains("show")) return;
+    const k = e.key.toLowerCase();
+    if(k==="d") addInput("D");
+    if(k==="t") addInput("T");
+    if(k==="i") addInput("I");
+    if(k==="backspace") backspace();
+    if(k==="escape") clearInputs();
+  });
+
+  segAuto.addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if(!b) return;
+    state.autoMode = (b.dataset.auto === "auto");
+    renderModeUI();
+    save();
+  });
+
+  segMode.addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if(!b) return;
+    state.manualMode = b.dataset.mode;
+    renderModeUI();
+    save();
+  });
+
+  predOk.addEventListener("click", () => { closeModal(predModal); openModal(confirmModal); });
+
+  btnYes.addEventListener("click", () => {
+    closeModal(confirmModal);
+    applyOutcome(true, state.lastPrediction?.pred);
+  });
+
+  let selectedActual = null;
+  btnNo.addEventListener("click", () => {
+    closeModal(confirmModal);
+    selectedActual = null;    [...actualModal.querySelectorAll("button[data-actual]")].forEach(x=>x.classList.remove("active"));
+    openModal(actualModal);
+  });
+
+  actualModal.addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-actual]"); if(!b) return;
+    selectedActual = b.dataset.actual;
+    // Auto-submit immediately on selection
+    closeModal(actualModal);
+    applyOutcome(false, selectedActual);
+  });
+function renderAll(){
+    recomputeSuggestedBet();
+    renderSlots();
+    renderModeUI();
+    renderRisk(computeRisk());
+    renderStats();
+    renderHistory();
+    renderBankrollUI();
+    marketTrend.textContent = "Market Trend: " + computeMarketTrend();
+    const s = streakInfo(state.fullHistory);
+    currentStreak.textContent = "Current Streak: " + (s.side ? ((s.side==="D"?"Dragon":"Tiger") + " × " + s.len) : "—");
+    if(!state.inputs.length) aiRec.textContent = "Enter 5 results…";
+  }
+
+  load();
+  state.bankroll = Number.isFinite(state.bankroll) ? state.bankroll : 100000;
+  state.baseBet = Number.isFinite(state.baseBet) ? state.baseBet : 1000;
+  state.lossCarry = Number.isFinite(state.lossCarry) ? state.lossCarry : 0;
+  recomputeSuggestedBet();
+  renderAll();
+})();
+</script>
+</body>
+</html>
